@@ -14,6 +14,19 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         os.environ["oauth_secret"]
     )
 
-    client.create_text("celldk", state="published", slug="testing-text-posts", title="Testing", body="testing1 2 3 4")
+    json_data = req.get_json()
+
+    event = req.headers.get("X-GitHub-Event")
+
+    if event == "push":
+        data = client.create_text("celldk", state="published", slug=f"new-commit-{json_data['after']}", title=f"New commit to {json_data['repository']['name']}", body=f"New commit ID: {json_data['after']}\nMessage: {json_data['commits'][0]['message']}\nCI: TBD")
+        logging.info(data)
+
+    if event == "workflow_run":
+        if json_data["action"] == "completed":
+            if json_data["workflow_run"]["conclusion"] != "success":
+                logging.info("CI Failed")
+            else:
+                logging.info("CI Succeeded")
 
     return func.HttpResponse("Post created")
